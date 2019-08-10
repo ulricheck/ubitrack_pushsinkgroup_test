@@ -1,0 +1,45 @@
+set(UBITRACK_APPLICATION_NAME utSinkGroupTest)
+
+# All cpp files for UTCORE
+file(GLOB UBITRACK_SRCS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+   "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+   "${CMAKE_CURRENT_SOURCE_DIR}/*/*.cpp"
+   "${CMAKE_CURRENT_SOURCE_DIR}/*/*/*.cpp"
+)
+
+# All header files for UTCORE
+file(GLOB UBITRACK_HEADERS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+   "${CMAKE_CURRENT_SOURCE_DIR}/*.h"  
+   "${CMAKE_CURRENT_SOURCE_DIR}/*/*.h" 
+   "${CMAKE_CURRENT_SOURCE_DIR}/*/*/*.h" 
+)
+
+if(MSVC)
+  set(UBITRACK_COMPILE_DEFINITIONS ${UBITRACK_COMPILE_DEFINITIONS} "BOOST_ALL_DYN_LINK")
+endif(MSVC)
+
+# UTCORE library definition
+add_executable(${UBITRACK_APPLICATION_NAME} ${UBITRACK_SRCS} ${UBITRACK_HEADERS})
+
+target_link_libraries(${UBITRACK_APPLICATION_NAME}
+  CONAN_PKG::ubitrack_facade
+  )
+
+target_include_directories(${UBITRACK_APPLICATION_NAME} PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<INSTALL_INTERFACE:include>
+  PRIVATE 
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/components>
+)
+
+# Apply Target Properties
+if(MSVC)
+  if(CMAKE_CROSSCOMPILING)
+    set_target_properties(${UBITRACK_APPLICATION_NAME} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:secchk")
+  endif()
+  set_target_properties(${UBITRACK_APPLICATION_NAME} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:libc /DEBUG")
+endif()
+
+ubitrack_set_target_properties(${UBITRACK_APPLICATION_NAME})
+ubitrack_install_application(${UBITRACK_APPLICATION_NAME})
