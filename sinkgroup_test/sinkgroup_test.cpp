@@ -151,6 +151,12 @@ int main( int ac, char** av )
 		std::cout << "Loading components..." << std::endl << std::flush;
 		Facade::AdvancedFacade utFacade(dropEvents, sComponentsPath  );
 
+		// add sink group
+		Facade::SinkGroup testSinkGroup;
+		Facade::SinkGroupObserver testSinkObserver(utFacade, testSinkGroup, "metadataSensorGroup", "default");
+		utFacade.addDataflowObserver(&testSinkObserver);
+
+
 		if ( sServerAddress.empty() )
 		{
 			std::cout << "Instantiating dataflow network from " << sUtqlFile << "..." << std::endl << std::flush;
@@ -171,9 +177,39 @@ int main( int ac, char** av )
 		std::cout << "Starting dataflow" << std::endl;
 		utFacade.startDataflow();
 
+		// test if we found sinks
+		std::cout << "Sink Names" << std::endl;
+		auto sinkNames = testSinkGroup.getSinkNames();
+		for (auto& n : sinkNames) {
+		    auto ci = testSinkGroup.getMeasurementType(n);
+		    std::cout << "Sink: " << n << " type: " << ci.measurementType << " fixedSize: " << ci.isFixedType << std::endl;
+		}
+
 		while( !bStop )
 		{
-			Util::sleep( 1000 );
+		    auto wffr = testSinkGroup.waitForCompleteFrameTimeout(100);
+		    if (wffr == Facade::WaitForFrameResult::NewFrame) {
+                for (auto& n : sinkNames) {
+                    auto ci = testSinkGroup.getMeasurementType(n);
+                    if (!ci.isFixedType) {
+                        continue;
+                    }
+                    switch(ci.measurementType) {
+                        case Measurement::Traits::MeasurementType ::Pose:
+                        {
+                            Measurement::Pose m;
+                            if(testSinkGroup.getMeasurement<Measurement::Pose>(n, m)) {
+                                std::cout << "received Pose " << n << " value: " << m << std::endl;
+                            }
+                        }
+                            break;
+                        default:
+                            break;
+                    }
+                }
+		    } else {
+                Util::sleep( 1000 );
+		    }
 			#ifdef _WIN32
 			if(kbhit())
 			{
